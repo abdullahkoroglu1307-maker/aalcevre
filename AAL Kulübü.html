@@ -163,6 +163,15 @@ footer{text-align:center;opacity:.7;padding:0 16px 24px;font-size:.9rem}
 @keyframes pin{0%,18%{transform:translateY(2.5px) scale(.85);opacity:.9}60%,85%{transform:translateY(0) scale(1.06);opacity:1}100%{transform:translateY(2.5px) scale(.85);opacity:.9}}
 .gA.rb.idle .pS{animation:hpx 7.5s ease-in-out infinite}
 @keyframes hpx{0%,55%{transform:translateY(0)}62%{transform:translateY(-13px)}70%{transform:translateY(0)}74%{transform:translateY(-9px)}82%,100%{transform:translateY(0)}}
+
+.wxbox{position:absolute;top:calc(2.5% + 52px);right:2.2%;z-index:3;display:flex;align-items:center;gap:10px;background:var(--card);background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--ac);border-radius:16px;padding:8px 14px 8px 11px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.18);transition:background 1.2s,color 1.2s,transform .15s;user-select:none}
+.wxbox:hover{transform:translateY(-1px)}
+.wxbox em{font-style:normal;font-size:1.7rem;line-height:1}
+.wxbox .wd{display:flex;flex-direction:column;justify-content:center}
+.wxbox .wd b{font-size:1.05rem;line-height:1.2}
+.wxbox .wk{font-size:.72rem;opacity:.8;line-height:1.2}
+.wxbox .wl{font-size:.64rem;opacity:.6;line-height:1.3;white-space:nowrap}
+@media(max-width:640px){.wxbox{top:calc(2.5% + 48px);padding:6px 10px 6px 9px}.wxbox em{font-size:1.35rem}.wxbox .wd b{font-size:.92rem}}
 </style></head><body>
 <div class="top"><div class="art" id="art" data-season="autumn" data-time="day">
 <div class="ly base"></div><div class="ly tone"></div>
@@ -259,19 +268,26 @@ paintThm();document.body.appendChild(thmBtn);
 addEventListener('resize',()=>rainEl.style.setProperty('--H',A.clientHeight+'px'));
 
 // --- canlı hava durumu (Open-Meteo, anahtar gerektirmez) ---
-const bolt=document.createElement('div');bolt.className='bolt';A.firstChild?A.insertBefore(bolt,rainEl):A.appendChild(bolt);
-const wbtn=document.getElementById('wbtn');let lastLL=[39.9334,32.8597];
+const bolt=document.createElement('div');bolt.className='bolt';A.insertBefore(bolt,rainEl);
+const wxBox=document.createElement('div');wxBox.className='wxbox';wxBox.id='wxbox';wxBox.setAttribute('aria-live','polite');wxBox.title='Güncel hava durumu — tıkla yenile';
+wxBox.innerHTML='<em id="wxe">🌤️</em><span class="wd"><b id="wxt">Hava…</b><span class="wk" id="wxk">hazırlanıyor</span><span class="wl" id="wxl">📍 Ankara</span></span>';
+A.insertBefore(wxBox,rainEl);wxBox.onclick=e=>{e.stopPropagation();refreshWx()};
+const wbtn=document.getElementById('wbtn');let lastLL=[39.9334,32.8597],geoLoc=false;
+const WN={clear:'Açık',cloud:'Bulutlu',rain:'Yağmurlu',snow:'Karlı',fog:'Sisli',thunder:'Sağanak fırtına'};
 function wtype(c){if(c==0||c==1)return['☀️','clear'];if(c==2)return['⛅','cloud'];if(c==3)return['☁️','cloud'];if(c==45||c==48)return['🌫️','fog'];if(c>=51&&c<=57)return['🌦️','rain'];if(c>=61&&c<=67)return['🌧️','rain'];if(c>=71&&c<=77)return['❄️','snow'];if(c>=80&&c<=82)return['🌧️','rain'];if(c==85||c==86)return['🌨️','snow'];if(c>=95)return['⛈️','thunder'];return['🌤️','cloud']}
-function applyWx(c,tmp){const[w,tp]=wtype(c||0);wtypeCache=[w,tp];
-wbtn.textContent=(tmp!=null?w+' '+tmp+'°':w);wbtn.title='Konumuna göre canlı hava — tıkla yenile';
+function applyWx(c,tmp,wind,hum){const[w,tp]=wtype(c||0);
+wbtn.textContent=w+(tmp!=null?' '+Math.round(tmp)+'°':'');
+$('#wxe').textContent=w;$('#wxt').textContent=tmp!=null?Math.round(tmp)+'°':'--°';$('#wxk').textContent=WN[tp];
+$('#wxl').textContent='💨 '+(wind!=null?Math.round(wind):'--')+' · 💧 '+(hum!=null?Math.round(hum):'--')+'% · 📍 '+(geoLoc?'Konumun':'Ankara');
 wxSnow=(tp=='snow');stormMode=(tp=='thunder');
 A.dataset.cloud=(tp=='cloud'||tp=='thunder'||tp=='fog')?1:0;
 A.dataset.fog=(tp=='fog')?1:0;
 const nr=(tp=='rain'||stormMode);if(nr!=rainOn)toggleRain();
 particles();}
-function fetchWx(){try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${lastLL[0]}&longitude=${lastLL[1]}&current=temperature_2m,weather_code`;
-wbtn.textContent='⏳ …';fetch(u,{signal:AbortSignal.timeout?AbortSignal.timeout(9000):undefined}).then(r=>r.json()).then(j=>{if(j&&j.current)applyWx(j.current.weather_code,Math.round(j.current.temperature_2m));else wbtn.textContent='🌤️ Hava'}).catch(()=>{wbtn.textContent='🌤️ Hava'})}catch(e){wbtn.textContent='🌤️ Hava'}}
-function refreshWx(){if(navigator.geolocation&&('ontouchstart' in window||true)){try{navigator.geolocation.getCurrentPosition(p=>{lastLL=[p.coords.latitude,p.coords.longitude];fetchWx()},()=>fetchWx(),{timeout:9000})}catch(e){fetchWx()}}else fetchWx()}
+function wxErr(){$('#wxt').textContent='--°';$('#wxk').textContent='hava alınamadı';wbtn.textContent='🌤️ Hava'}
+function fetchWx(){try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${lastLL[0]}&longitude=${lastLL[1]}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m`;
+wbtn.textContent='⏳ …';fetch(u,{signal:AbortSignal.timeout?AbortSignal.timeout(9000):undefined}).then(r=>r.json()).then(j=>{if(j&&j.current)applyWx(j.current.weather_code,j.current.temperature_2m,j.current.wind_speed_10m,j.current.relative_humidity_2m);else wxErr()}).catch(wxErr)}catch(e){wxErr()}}
+function refreshWx(){if(navigator.geolocation){try{navigator.geolocation.getCurrentPosition(p=>{lastLL=[p.coords.latitude,p.coords.longitude];geoLoc=true;fetchWx()},()=>fetchWx(),{timeout:9000})}catch(e){fetchWx()}}else fetchWx()}
 function thunderTick(){if(stormMode&&document.visibilityState=='visible'&&Math.random()<.5){bolt.classList.remove('on');void bolt.offsetWidth;bolt.classList.add('on');A.classList.add('shk');setTimeout(()=>A.classList.remove('shk'),1300)}}
 setInterval(thunderTick,4200);
 setInterval(()=>{if(document.visibilityState=='visible')refreshWx()},900000);
