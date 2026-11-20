@@ -369,6 +369,14 @@ function thunderTick(){if(stormMode&&document.visibilityState=='visible'&&Math.r
 setInterval(thunderTick,4200);
 setInterval(()=>{if(document.visibilityState=='visible')refreshWx()},900000);
 refreshWx();
+// --- gömülü mod bağlantı köprüsü: önce üst çerçeve, olmazsa yeni sekme ---
+function frameded(){let f=false;try{f=window.top!==window.self}catch(e){f=true}return f}
+document.querySelectorAll('.pc').forEach(c=>c.addEventListener('click',ex=>{
+if(!frameded())return;
+ex.preventDefault();const u=c.href;
+try{window.top.location.href=u}catch(e){}
+setTimeout(()=>{try{window.open(u,'_blank')}catch(e){}},700)
+}));
 
 // --- gizli simülasyon paneli: Güneş'e ya da Ay'a tıkla ---
 const simMan={s:false,t:false},simEl=document.createElement('div');simEl.className='sim';simEl.id='sim';
