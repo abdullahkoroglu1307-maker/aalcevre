@@ -371,12 +371,10 @@ setInterval(()=>{if(document.visibilityState=='visible')refreshWx()},900000);
 refreshWx();
 // --- gömülü mod bağlantı köprüsü: önce üst çerçeve, olmazsa yeni sekme ---
 function frameded(){let f=false;try{f=window.top!==window.self}catch(e){f=true}return f}
-document.querySelectorAll('.pc').forEach(c=>c.addEventListener('click',ex=>{
-if(!frameded())return;
-ex.preventDefault();const u=c.href;
+document.addEventListener('click',ex=>{const c=ex.target&&ex.target.closest?ex.target.closest('a.pc'):null;if(!c||!frameded())return;
+ex.preventDefault();ex.stopPropagation();const u=c.href;
 try{window.top.location.href=u}catch(e){}
-setTimeout(()=>{try{window.open(u,'_blank')}catch(e){}},700)
-}));
+setTimeout(()=>{try{window.open(u,'_blank','noopener')}catch(e){}},700)},true);
 
 // --- gizli simülasyon paneli: Güneş'e ya da Ay'a tıkla ---
 const simMan={s:false,t:false},simEl=document.createElement('div');simEl.className='sim';simEl.id='sim';
